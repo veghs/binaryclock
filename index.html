@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Binary Dot Clock</title>
+
+<style>
+html,body{
+margin:0;
+height:100%;
+background:#000;
+overflow:hidden;
+font-family:system-ui;
+color:#ccc;
+}
+
+#clock{
+position:absolute;
+inset:0;
+margin:auto;
+width:400px;
+height:400px;
+}
+
+.dot{
+position:absolute;
+width:22px;
+height:22px;
+border-radius:50%;
+background:rgb(10,10,10);
+transform:translate(-50%,-50%);
+transition:background .15s;
+}
+
+.sec.on{background:rgb(50,255,50);}
+.min.on{background:rgb(50,170,255);}
+.hour.on{background:rgb(255,80,50);}
+
+.tick{
+position:absolute;
+width:14px;
+height:2px;
+background:#fff;
+left:50%;
+top:50%;
+transform-origin:center left;
+pointer-events:none;
+}
+
+.label{
+position:absolute;
+font:11px system-ui;
+transform:translate(-50%,-50%);
+pointer-events:none;
+opacity:.9;
+}
+
+.label.sec{color:rgb(90,255,90);}
+.label.min{color:rgb(100,190,255);}
+.label.hour{color:rgb(255,120,90);}
+
+#innerValues{
+position:absolute;
+left:50%;
+top:50%;
+transform:translate(-50%,-50%);
+text-align:center;
+line-height:1.2;
+pointer-events:none;
+}
+
+#innerValues div{
+font-size:20px;
+font-weight:600;
+}
+
+#vSec{color:rgb(50,255,50);}
+#vMin{color:rgb(50,170,255);}
+#vHour{color:rgb(255,80,50);}
+
+#controlsToggle{
+position:absolute;
+left:50%;
+top:73%;
+transform:translateX(-50%);
+font-size:22px;
+cursor:pointer;
+user-select:none;
+opacity:.85;
+color:#555555;
+}
+
+#controlsToggle:hover{
+opacity:1;
+}
+
+.controls{
+position:absolute;
+left:50%;
+top:78%;
+transform:translateX(-50%);
+display:flex;
+flex-direction:column;
+gap:10px;
+align-items:center;
+}
+
+.controls.hidden{
+display:none;
+}
+
+.switchRow{
+display:flex;
+align-items:center;
+gap:10px;
+font-size:14px;
+}
+
+.switch{
+position:relative;
+display:inline-block;
+width:46px;
+height:24px;
+}
+
+.switch input{
+opacity:0;
+width:0;
+height:0;
+}
+
+.slider{
+position:absolute;
+cursor:pointer;
+top:0;
+left:0;
+right:0;
+bottom:0;
+background:#444;
+transition:.25s;
+border-radius:20px;
+}
+
+.slider:before{
+position:absolute;
+content:"";
+height:18px;
+width:18px;
+left:3px;
+bottom:3px;
+background:white;
+transition:.25s;
+border-radius:50%;
+}
+
+input:checked + .slider{
+background:#3cff6a;
+}
+
+input:checked + .slider:before{
+transform:translateX(22px);
+}
+</style>
+</head>
+
+<body>
+
+<div id="clock">
+
+<div id="innerValues">
+<div id="vHour">--</div>
+<div id="vMin">--</div>
+<div id="vSec">--</div>
+</div>
+
+</div>
+
+<div id="controlsToggle">⌄</div> <!-- start arrow down -->
+
+<div class="controls hidden" id="controlsBox"> <!-- hidden by default -->
+
+<div class="switchRow">
+<span>Center Time</span>
+<label class="switch">
+<input type="checkbox" id="toggleCenter" checked>
+<span class="slider"></span>
+</label>
+</div>
+
+<div class="switchRow">
+<span>Bit Values</span>
+<label class="switch">
+<input type="checkbox" id="toggleLabels" checked>
+<span class="slider"></span>
+</label>
+</div>
+
+</div>
+
+<script>
+
+const clock=document.getElementById("clock");
+const dots=[];
+const labels=[];
+
+const SIZE=400;
+const RING=SIZE*0.42;
+const LABEL_R=RING+22;
+const TICK_R=RING+1;
+
+const cx=SIZE/2;
+const cy=SIZE/2;
+
+const segments=[
+{start:0,len:6,cls:"sec"},
+{start:6,len:6,cls:"min"},
+{start:12,len:4,cls:"hour"}
+];
+
+for(let i=0;i<16;i++){
+
+const angleDeg=-90+(360*i/16);
+const rad=angleDeg*Math.PI/180;
+
+const x=cx+RING*Math.cos(rad);
+const y=cy+RING*Math.sin(rad);
+
+const d=document.createElement("div");
+d.className="dot";
+
+const seg=segments.find(s=>i>=s.start&&i<s.start+s.len);
+d.dataset.seg=seg.cls;
+
+d.style.left=x+"px";
+d.style.top=y+"px";
+
+clock.appendChild(d);
+dots.push(d);
+
+const bitIndex=i-seg.start;
+const value=1<<bitIndex;
+
+const lx=cx+LABEL_R*Math.cos(rad);
+const ly=cy+LABEL_R*Math.sin(rad);
+
+const label=document.createElement("div");
+label.className="label "+seg.cls;
+label.textContent=value;
+
+label.style.left=lx+"px";
+label.style.top=ly+"px";
+
+clock.appendChild(label);
+labels.push(label);
+}
+
+const boundaries=[5,11,15];
+
+function addTick(angleDeg){
+
+const tick=document.createElement("div");
+tick.className="tick";
+
+const rad=angleDeg*Math.PI/180;
+
+tick.style.left=(cx+TICK_R*Math.cos(rad))+"px";
+tick.style.top=(cy+TICK_R*Math.sin(rad))+"px";
+
+tick.style.transform=`translate(-50%,-50%) rotate(${angleDeg}deg)`;
+
+clock.appendChild(tick);
+}
+
+for(let b of boundaries){
+addTick(-90+(360*(b+0.5)/16));
+}
+
+function writeSegment(value,seg){
+for(let k=0;k<seg.len;k++){
+const idx=seg.start+k;
+const on=(value&(1<<k))!==0;
+dots[idx].className="dot "+seg.cls+(on?" on":"");
+}
+}
+
+function update(){
+
+const n=new Date();
+
+let h=n.getHours()%12;
+if(h===0)h=12;
+
+const m=n.getMinutes();
+const s=n.getSeconds();
+
+writeSegment(s,segments[0]);
+writeSegment(m,segments[1]);
+writeSegment(h,segments[2]);
+
+document.getElementById("vHour").textContent=h.toString().padStart(2,"0");
+document.getElementById("vMin").textContent=m.toString().padStart(2,"0");
+document.getElementById("vSec").textContent=s.toString().padStart(2,"0");
+}
+
+setInterval(update,1000);
+update();
+
+const center=document.getElementById("innerValues");
+
+document.getElementById("toggleCenter").onchange=(e)=>{
+center.style.display=e.target.checked?"block":"none";
+};
+
+document.getElementById("toggleLabels").onchange=(e)=>{
+labels.forEach(l=>{
+l.style.display=e.target.checked?"block":"none";
+});
+};
+
+const toggleBtn=document.getElementById("controlsToggle");
+const controls=document.getElementById("controlsBox");
+
+let open=false; // hidden by default
+
+toggleBtn.onclick = () => {
+    open = !open;
+    controls.classList.toggle("hidden");
+    toggleBtn.textContent = open ? "⌃" : "⌄";
+    toggleBtn.style.top = open ? "73.8%" : "73%";
+};
+
+</script>
+
+</body>
+</html>
