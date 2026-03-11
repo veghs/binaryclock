@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Binary Dot Clock</title>
+<title>BinaryClock - vegh</title>
 
 <style>
 html,body{
@@ -29,7 +29,13 @@ height:22px;
 border-radius:50%;
 background:rgb(10,10,10);
 transform:translate(-50%,-50%);
-transition:background .15s;
+transition:background .15s,color .15s;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:12px;
+font-weight:600;
+color:transparent;
 }
 
 .sec.on{background:rgb(50,255,50);}
@@ -46,18 +52,6 @@ top:50%;
 transform-origin:center left;
 pointer-events:none;
 }
-
-.label{
-position:absolute;
-font:11px system-ui;
-transform:translate(-50%,-50%);
-pointer-events:none;
-opacity:.9;
-}
-
-.label.sec{color:rgb(90,255,90);}
-.label.min{color:rgb(100,190,255);}
-.label.hour{color:rgb(255,120,90);}
 
 #innerValues{
 position:absolute;
@@ -88,10 +82,26 @@ cursor:pointer;
 user-select:none;
 opacity:.85;
 color:#555555;
+display:flex;
+align-items:center;
+gap:4px;
 }
 
 #controlsToggle:hover{
 opacity:1;
+}
+
+#pausedIcon{
+color:#888888;
+font-size:20px;
+opacity:0;
+transition:opacity 0.3s ease;
+position:absolute;
+left:calc(50% + 16px);
+margin-top: 5px;
+top:50%;
+transform:translateY(-50%);
+pointer-events:none;
 }
 
 .controls{
@@ -175,9 +185,12 @@ transform:translateX(22px);
 
 </div>
 
-<div id="controlsToggle">⌄</div> <!-- start arrow down -->
+<div id="controlsToggle">
+<span id="toggleArrow">⌄</span>
+<span id="pausedIcon">⏸</span>
+</div>
 
-<div class="controls hidden" id="controlsBox"> <!-- hidden by default -->
+<div class="controls hidden" id="controlsBox">
 
 <div class="switchRow">
 <span>Center Time</span>
@@ -190,7 +203,7 @@ transform:translateX(22px);
 <div class="switchRow">
 <span>Bit Values</span>
 <label class="switch">
-<input type="checkbox" id="toggleLabels" checked>
+<input type="checkbox" id="toggleBits" checked>
 <span class="slider"></span>
 </label>
 </div>
@@ -201,13 +214,10 @@ transform:translateX(22px);
 
 const clock=document.getElementById("clock");
 const dots=[];
-const labels=[];
 
 const SIZE=400;
 const RING=SIZE*0.42;
-const LABEL_R=RING+22;
 const TICK_R=RING+1;
-
 const cx=SIZE/2;
 const cy=SIZE/2;
 
@@ -218,116 +228,115 @@ const segments=[
 ];
 
 for(let i=0;i<16;i++){
+    const angleDeg=-90+(360*i/16);
+    const rad=angleDeg*Math.PI/180;
+    const x=cx+RING*Math.cos(rad);
+    const y=cy+RING*Math.sin(rad);
 
-const angleDeg=-90+(360*i/16);
-const rad=angleDeg*Math.PI/180;
+    const d=document.createElement("div");
+    d.className="dot";
 
-const x=cx+RING*Math.cos(rad);
-const y=cy+RING*Math.sin(rad);
+    const seg=segments.find(s=>i>=s.start&&i<s.start+s.len);
+    d.dataset.seg=seg.cls;
 
-const d=document.createElement("div");
-d.className="dot";
+    const bitIndex=i-seg.start;
+    const value=1<<bitIndex;
+    d.textContent=value;
 
-const seg=segments.find(s=>i>=s.start&&i<s.start+s.len);
-d.dataset.seg=seg.cls;
+    d.style.left=x+"px";
+    d.style.top=y+"px";
 
-d.style.left=x+"px";
-d.style.top=y+"px";
-
-clock.appendChild(d);
-dots.push(d);
-
-const bitIndex=i-seg.start;
-const value=1<<bitIndex;
-
-const lx=cx+LABEL_R*Math.cos(rad);
-const ly=cy+LABEL_R*Math.sin(rad);
-
-const label=document.createElement("div");
-label.className="label "+seg.cls;
-label.textContent=value;
-
-label.style.left=lx+"px";
-label.style.top=ly+"px";
-
-clock.appendChild(label);
-labels.push(label);
+    clock.appendChild(d);
+    dots.push(d);
 }
 
 const boundaries=[5,11,15];
 
 function addTick(angleDeg){
-
-const tick=document.createElement("div");
-tick.className="tick";
-
-const rad=angleDeg*Math.PI/180;
-
-tick.style.left=(cx+TICK_R*Math.cos(rad))+"px";
-tick.style.top=(cy+TICK_R*Math.sin(rad))+"px";
-
-tick.style.transform=`translate(-50%,-50%) rotate(${angleDeg}deg)`;
-
-clock.appendChild(tick);
+    const tick=document.createElement("div");
+    tick.className="tick";
+    const rad=angleDeg*Math.PI/180;
+    tick.style.left=(cx+TICK_R*Math.cos(rad))+"px";
+    tick.style.top=(cy+TICK_R*Math.sin(rad))+"px";
+    tick.style.transform=`translate(-50%,-50%) rotate(${angleDeg}deg)`;
+    clock.appendChild(tick);
 }
 
 for(let b of boundaries){
-addTick(-90+(360*(b+0.5)/16));
+    addTick(-90+(360*(b+0.5)/16));
 }
 
 function writeSegment(value,seg){
-for(let k=0;k<seg.len;k++){
-const idx=seg.start+k;
-const on=(value&(1<<k))!==0;
-dots[idx].className="dot "+seg.cls+(on?" on":"");
-}
-}
-
-function update(){
-
-const n=new Date();
-
-let h=n.getHours()%12;
-if(h===0)h=12;
-
-const m=n.getMinutes();
-const s=n.getSeconds();
-
-writeSegment(s,segments[0]);
-writeSegment(m,segments[1]);
-writeSegment(h,segments[2]);
-
-document.getElementById("vHour").textContent=h.toString().padStart(2,"0");
-document.getElementById("vMin").textContent=m.toString().padStart(2,"0");
-document.getElementById("vSec").textContent=s.toString().padStart(2,"0");
+    const showBits = document.getElementById("toggleBits").checked;
+    for(let k=0;k<seg.len;k++){
+        const idx=seg.start+k;
+        const on=(value&(1<<k))!==0;
+        dots[idx].className="dot "+seg.cls+(on?" on":"");
+        dots[idx].style.color = (on && showBits) ? "#fff" : "transparent";
+    }
 }
 
-setInterval(update,1000);
-update();
+let paused = false;
+let pausedTime = null;
+
+function updateClock(){
+    const now = paused ? pausedTime : new Date();
+    let h = now.getHours() % 12;
+    if(h===0) h = 12;
+    let m = now.getMinutes();
+    let s = now.getSeconds();
+
+    writeSegment(s,segments[0]);
+    writeSegment(m,segments[1]);
+    writeSegment(h,segments[2]);
+
+    document.getElementById("vHour").textContent=h.toString().padStart(2,"0");
+    document.getElementById("vMin").textContent=m.toString().padStart(2,"0");
+    document.getElementById("vSec").textContent=s.toString().padStart(2,"0");
+}
+
+setInterval(() => {
+    if(!paused) updateClock();
+},1000);
+
+updateClock();
 
 const center=document.getElementById("innerValues");
-
 document.getElementById("toggleCenter").onchange=(e)=>{
-center.style.display=e.target.checked?"block":"none";
+    center.style.display=e.target.checked?"block":"none";
 };
-
-document.getElementById("toggleLabels").onchange=(e)=>{
-labels.forEach(l=>{
-l.style.display=e.target.checked?"block":"none";
-});
+document.getElementById("toggleBits").onchange=(e)=>{
+    updateClock();
 };
 
 const toggleBtn=document.getElementById("controlsToggle");
+const pausedIcon=document.getElementById("pausedIcon");
+const toggleArrow=document.getElementById("toggleArrow");
 const controls=document.getElementById("controlsBox");
-
-let open=false; // hidden by default
+let open=false;
 
 toggleBtn.onclick = () => {
     open = !open;
     controls.classList.toggle("hidden");
-    toggleBtn.textContent = open ? "⌃" : "⌄";
+    toggleArrow.textContent = open ? "⌃" : "⌄";
     toggleBtn.style.top = open ? "73.8%" : "73%";
 };
+
+document.addEventListener("keydown", (e)=>{
+    if(e.code==="Space"){
+        e.preventDefault();
+        paused = !paused;
+        if(paused){
+            pausedTime = new Date();
+            pausedIcon.style.opacity = "1";
+            updateClock();
+        } else {
+            pausedTime = null;
+            pausedIcon.style.opacity = "0";
+            updateClock();
+        }
+    }
+});
 
 </script>
 
