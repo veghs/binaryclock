@@ -262,6 +262,45 @@ transition:none;
 
 </div>
 
+<div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);text-align:center;color:#fff;">
+  <button id="likeBtn" style="padding:10px 20px;font-size:16px;cursor:pointer;">👍 Like</button>
+  <div>Likes: <span id="likeCount">0</span></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+  // Initialize Supabase
+  const supabaseUrl = 'https://zungpwkzouoyzplnrrxv.supabase.co'
+  const supabaseKey = 'sb_publishable_BWbybVJDJoW3bEUqQfp2Kg_WFUoBQQh'
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey)
+
+  const likeBtn = document.getElementById('likeBtn')
+  const likeCount = document.getElementById('likeCount')
+
+  // Load likes from database
+  async function getLikes() {
+    let { data, error } = await supabase
+      .from('likes')
+      .select('count')
+      .eq('id', 1)
+      .single()
+    if(data) likeCount.textContent = data.count
+  }
+
+  // Increment likes
+  async function addLike() {
+    const { data, error } = await supabase
+      .from('likes')
+      .upsert({ id: 1, count: supabase.literal('count + 1') })
+      .select()
+      .single()
+    if(data) likeCount.textContent = data.count
+  }
+
+  likeBtn.addEventListener('click', addLike)
+  getLikes()
+</script>
+
 <script>
 
 /* clock dots and labels */
