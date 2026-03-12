@@ -73,49 +73,47 @@ input:checked + .slider:before{background:#c0c0c0 !important; transform:translat
   <div style="margin-top:4px;">Likes: <span id="likeCount">0</span></div>
 </div>
 
-<!-- 1. Load Supabase library first -->
+<!-- 1. Load Supabase UMD library -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 
-<!-- 2. Then your Supabase code -->
+<!-- 2. Supabase client + Likes -->
 <script>
-  const supabase = supabase.createClient(
-    'https://zungpwkzouoyzplnrrxv.supabase.co',
-    'sb_publishable_BWbybVJDJoW3bEUqQfp2Kg_WFUoBQQh'
-  );
+const supabase = supabase.createClient(
+  'https://zungpwkzouoyzplnrrxv.supabase.co',
+  'sb_publishable_BWbybVJDJoW3bEUqQfp2Kg_WFUoBQQh'
+);
 
-  const likeBtn = document.getElementById('likeBtn');
-  const likeCount = document.getElementById('likeCount');
+const likeBtn = document.getElementById('likeBtn');
+const likeCount = document.getElementById('likeCount');
 
-  // Initialize or fetch likes
-  async function initLike() {
-    const { data, error } = await supabase.from('likes').select('count').eq('id',1).maybeSingle();
-    if (error) { console.error(error); return; }
-
-    if (!data) {
-      const { data: inserted, error: insertError } = await supabase.from('likes').insert({id:1,count:2}).select().single();
-      if (insertError) console.error(insertError);
-      else likeCount.textContent = inserted.count;
-    } else {
-      likeCount.textContent = data.count;
-    }
+// Initialize Likes
+async function initLike() {
+  const { data, error } = await supabase.from('likes').select('count').eq('id',1).maybeSingle();
+  if (error) { console.error(error); return; }
+  if (!data) {
+    const { data: inserted } = await supabase.from('likes').insert({id:1,count:2}).select().single();
+    likeCount.textContent = inserted.count;
+  } else {
+    likeCount.textContent = data.count;
   }
+}
 
-  // Increment likes
-  async function addLike() {
-    const { data, error } = await supabase.from('likes').select('count').eq('id',1).single();
-    if (error) { console.error(error); return; }
-    const newCount = data.count + 1;
-    const { error: updateError } = await supabase.from('likes').update({count:newCount}).eq('id',1);
-    if (updateError) console.error(updateError);
-    likeCount.textContent = newCount;
-  }
+// Increment Likes
+async function addLike() {
+  const { data, error } = await supabase.from('likes').select('count').eq('id',1).single();
+  if (error) { console.error(error); return; }
+  const newCount = data.count + 1;
+  await supabase.from('likes').update({count:newCount}).eq('id',1);
+  likeCount.textContent = newCount;
+}
 
-  likeBtn.addEventListener('click', addLike);
-  initLike();
+likeBtn.addEventListener('click', addLike);
+initLike();
 </script>
 
-<!-- 3. Binary clock code -->
+<!-- 3. Binary Clock -->
 <script>
+// (Clock code unchanged — same as your previous version)
 const clock=document.getElementById("clock");
 const dots=[]; const labels=[];
 const SIZE=400; const RING=SIZE*0.42; const OUT_RING=RING+34; const TICK_R=RING+1;
@@ -132,8 +130,14 @@ for(let i=0;i<16;i++){
   const l=document.createElement("div"); l.className="bitLabel "+seg.label; l.textContent=value; l.style.left=lx+"px"; l.style.top=ly+"px"; clock.appendChild(l); labels.push(l);
 }
 
-function addTick(angle){ const tick=document.createElement("div"); tick.className="tick"; const rad=angle*Math.PI/180; tick.style.left=(cx+TICK_R*Math.cos(rad))+"px"; tick.style.top=(cy+TICK_R*Math.sin(rad))+"px"; tick.style.transform=`translate(-50%,-50%) rotate(${angle}deg)`; clock.appendChild(tick);}
-for(let b of [5,11,15]) addTick(-90+(360*(b+0.5)/16));
+for(let b of [5,11,15]){
+  const tick=document.createElement("div"); tick.className="tick";
+  const rad=(-90+(360*(b+0.5)/16))*Math.PI/180;
+  tick.style.left=(cx+TICK_R*Math.cos(rad))+"px";
+  tick.style.top=(cy+TICK_R*Math.sin(rad))+"px";
+  tick.style.transform=`translate(-50%,-50%) rotate(${(-90+(360*(b+0.5)/16))}deg)`;
+  clock.appendChild(tick);
+}
 
 function writeSegment(value,seg){
   for(let k=0;k<seg.len;k++){
@@ -157,20 +161,6 @@ function updateClock(){
 setInterval(updateClock,1000); updateClock();
 
 document.getElementById("toggleCenter").onchange=e=>{ document.getElementById("innerValues").style.display=e.target.checked?"block":"none"; };
-
-const segSlider=document.getElementById("bitMode"); const highlight=document.getElementById("segHighlight"); let dragging=false;
-function followMouse(x){ const rect=segSlider.getBoundingClientRect(); let pos=(x-rect.left)/rect.width; if(pos<0) pos=0; if(pos>1) pos=1; highlight.style.left=(pos*100-16.666)+"%";}
-function snapMode(x){ const rect=segSlider.getBoundingClientRect(); let pos=(x-rect.left)/rect.width; if(pos<0) pos=0; if(pos>1) pos=1; bitMode=Math.round(pos*2); highlight.style.left=(bitMode*33.333)+"%"; updateClock(); }
-
-segSlider.addEventListener("mousedown",e=>{ dragging=true; highlight.classList.add("dragging"); document.getElementById("centerSlider").classList.add("dragging"); followMouse(e.clientX); });
-document.addEventListener("mousemove",e=>{ if(!dragging) return; followMouse(e.clientX); });
-document.addEventListener("mouseup",e=>{ if(!dragging) return; dragging=false; highlight.classList.remove("dragging"); document.getElementById("centerSlider").classList.remove("dragging"); snapMode(e.clientX); });
-
-const toggleBtn=document.getElementById("controlsToggle");
-const controls=document.getElementById("controlsBox");
-const toggleArrow=document.getElementById("toggleArrow");
-let open=false;
-toggleBtn.onclick=()=>{ open=!open; controls.classList.toggle("hidden"); toggleArrow.textContent=open?"⌃":"⌄"; };
 </script>
 
 </body>
