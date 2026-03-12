@@ -74,12 +74,6 @@ transform:translate(-50%,-50%);
 text-align:center;
 line-height:1.2;
 pointer-events:none;
-color:#ccc;
-transition:color .15s; /* added transition */
-}
-
-#innerValues.whiteDot{
-color:#fff; /* turns dot white when toggled */
 }
 
 #innerValues div{
@@ -126,7 +120,7 @@ gap:12px;
 font-size:14px;
 }
 
-/* iOS-style switch */
+/* iOS-style switch - FIXED */
 
 .switch{
 position:relative;
@@ -264,6 +258,7 @@ transition:none;
 /* clock dots and labels */
 const clock=document.getElementById("clock");
 const dots=[];
+const labels=[];
 
 const SIZE=400;
 const RING=SIZE*0.42;
@@ -286,6 +281,8 @@ for(let i=0;i<16;i++){
   const rad=angle*Math.PI/180;
   const x=cx+RING*Math.cos(rad);
   const y=cy+RING*Math.sin(rad);
+  const lx=cx+OUT_RING*Math.cos(rad);
+  const ly=cy+OUT_RING*Math.sin(rad);
 
   const seg=segments.find(s=>i>=s.start&&i<s.start+s.len);
   const bitIndex=i-seg.start;
@@ -298,6 +295,14 @@ for(let i=0;i<16;i++){
   d.style.top=y+"px";
   clock.appendChild(d);
   dots.push(d);
+
+  const l=document.createElement("div");
+  l.className="bitLabel "+seg.label;
+  l.textContent=value;
+  l.style.left=lx+"px";
+  l.style.top=ly+"px";
+  clock.appendChild(l);
+  labels.push(l);
 }
 
 /* ticks */
@@ -319,6 +324,18 @@ function writeSegment(value,seg){
     const idx=seg.start+k;
     const on=(value&(1<<k))!==0;
     dots[idx].className="dot "+seg.cls+(on?" on":"");
+    if(bitMode===0){
+      dots[idx].style.color=on?"#fff":"transparent";
+      labels[idx].style.opacity=0;
+    }
+    if(bitMode===1){
+      dots[idx].style.color="transparent";
+      labels[idx].style.opacity=0;
+    }
+    if(bitMode===2){
+      dots[idx].style.color="transparent";
+      labels[idx].style.opacity=1;
+    }
   }
 }
 
@@ -344,11 +361,6 @@ const centerSlider=document.getElementById("centerSlider");
 
 document.getElementById("toggleCenter").onchange=e=>{
   center.style.display=e.target.checked?"block":"none";
-  if(e.target.checked){
-    center.classList.add("whiteDot"); // dot becomes white
-  } else {
-    center.classList.remove("whiteDot");
-  }
 };
 
 /* segmented slider drag */
