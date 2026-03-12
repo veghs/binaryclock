@@ -2,289 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>BinaryClock - vegh</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.33.1/dist/supabase.min.js"></script>
-
-<style>
-html, body {
-  margin: 0;
-  height: 100%;
-  overflow: hidden;
-  font-family: system-ui;
-  color: #ccc;
-  background: url('https://images3.alphacoders.com/134/thumb-1920-1343278.png') center/cover no-repeat;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: inherit;
-  filter: blur(40px);
-  z-index: -1;
-}
-
-#clock{
-position:absolute;
-inset:0;
-margin:auto;
-width:400px;
-height:400px;
-}
-
-.dot{
-position:absolute;
-width:22px;
-height:22px;
-border-radius:50%;
-background:rgb(10,10,10);
-transform:translate(-50%,-50%);
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:12px;
-font-weight:600;
-color:transparent;
-transition:background .15s,color .15s;
-}
-
-.bitLabel{
-position:absolute;
-transform:translate(-50%,-50%);
-font-size:12px;
-font-weight:600;
-pointer-events:none;
-opacity:0;
-}
-
-.sec.on{background:rgb(50,255,50);}
-.min.on{background:rgb(50,170,255);}
-.hour.on{background:rgb(255,80,50);}
-
-.secLabel{color:rgb(50,255,50);}
-.minLabel{color:rgb(50,170,255);}
-.hourLabel{color:rgb(255,80,50);}
-
-.tick{
-position:absolute;
-width:14px;
-height:2px;
-background:#8a8a8a;
-left:50%;
-top:50%;
-transform-origin:center left;
-pointer-events:none;
-}
-
-#innerValues{
-position:absolute;
-left:50%;
-top:50%;
-transform:translate(-50%,-50%);
-text-align:center;
-line-height:1.2;
-pointer-events:none;
-}
-
-#innerValues div{
-font-size:20px;
-font-weight:600;
-}
-
-#vSec{color:rgb(50,255,50);}
-#vMin{color:rgb(50,170,255);}
-#vHour{color:rgb(255,80,50);}
-
-#controlsToggle{
-position:absolute;
-left:50%;
-top:73%;
-transform:translateX(-50%);
-font-size:22px;
-cursor:pointer;
-user-select:none;
-opacity:.85;
-color:#555;
-display:flex;
-align-items:center;
-gap:4px;
-}
-
-.controls{
-position:absolute;
-left:50%;
-top:78%;
-transform:translateX(-50%);
-display:flex;
-flex-direction:column;
-gap:12px;
-align-items:center;
-}
-
-.controls.hidden{display:none;}
-
-.switchRow{
-display:flex;
-align-items:center;
-gap:12px;
-font-size:14px;
-}
-
-/* iOS-style switch - FIXED */
-
-.switch{
-position:relative;
-display:inline-block;
-width:46px;
-height:24px;
-}
-
-.switch input{
-opacity:0;
-width:0;
-height:0;
-}
-
-.slider{
-position:absolute;
-cursor:pointer;
-top:0;
-left:0;
-right:0;
-bottom:0;
-background:#444;
-border-radius:20px;
-transition:.25s;
-}
-
-.slider:before{
-position:absolute;
-content:"";
-height:18px;
-width:18px;
-left:3px;
-bottom:3px;
-background:#888; /* gray when OFF */
-border-radius:50%;
-transition:.25s;
-}
-
-/* background green when ON */
-input:checked + .slider{
-background:#34c759;
-}
-
-/* knob white when ON */
-input:checked + .slider:before{
-background:#c0c0c0 !important;
-transform:translateX(22px);
-}
-
-/* dragging style */
-.slider.dragging:before{
-background:#fff !important;
-}
-
-/* segmented slider */
-
-.segmented{
-position:relative;
-display:flex;
-width:140px;
-height:26px;
-background:#222;
-border-radius:14px;
-overflow:hidden;
-cursor:pointer;
-}
-
-.segmented div{
-flex:1;
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:11px;
-color:#888;
-z-index:2;
-user-select:none;
-}
-
-.segHighlight{
-position:absolute;
-width:33.333%;
-height:100%;
-background:#3cff6a;
-border-radius:14px;
-left:0%;
-z-index:1;
-transition:left .15s;
-}
-
-.segHighlight.dragging{
-transition:none;
-}
-
-</style>
+<title>Like Test</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 </head>
-
 <body>
-
-<div id="clock">
-<div id="innerValues">
-<div id="vHour">--</div>
-<div id="vMin">--</div>
-<div id="vSec">--</div>
-</div>
-</div>
-
-<div id="controlsToggle">
-<span id="toggleArrow">⌄</span>
-</div>
-
-<div class="controls hidden" id="controlsBox">
-
-<div class="switchRow">
-<span>Center Time</span>
-<label class="switch">
-<input type="checkbox" id="toggleCenter" checked>
-<span class="slider" id="centerSlider"></span>
-</label>
-</div>
-
-<div class="switchRow">
-<span>Bit Values</span>
-<div class="segmented" id="bitMode">
-<div class="segHighlight" id="segHighlight"></div>
-<div>inside</div>
-<div>hidden</div>
-<div>outside</div>
-</div>
-</div>
-
-</div>
-
-<div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);text-align:center;color:#fff;font-family:system-ui;">
-  <button id="likeBtn" style="padding:10px 20px;font-size:16px;cursor:pointer;background:#333;border:none;border-radius:6px;color:#fff;">👍 Like</button>
-  <div style="margin-top:4px;">Likes: <span id="likeCount">0</span></div>
-</div>
+<button id="likeBtn">👍 Like</button>
+<div>Likes: <span id="likeCount">0</span></div>
 
 <script>
 const supabaseUrl = 'https://zungpwkzouoyzplnrrxv.supabase.co';
 const supabaseKey = 'sb_publishable_BWbybVJDJoW3bEUqQfp2Kg_WFUoBQQh';
-const supabase = Supabase.createClient(supabaseUrl, supabaseKey); // notice capital S
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 const likeBtn = document.getElementById('likeBtn');
 const likeCount = document.getElementById('likeCount');
 
 async function initLike() {
-  let { data, error } = await supabase
+  const { data } = await supabase
     .from('likes')
     .select('count')
     .eq('id', 1)
-    .maybeSingle(); // <-- safe if row missing
+    .maybeSingle();
 
   if (!data) {
-    // row missing, insert it
     const { data: inserted } = await supabase
       .from('likes')
       .insert({ id: 1, count: 2 })
@@ -297,187 +37,22 @@ async function initLike() {
 }
 
 async function addLike() {
-  // increment atomically
-  const { data, error } = await supabase.rpc('increment', { current_id: 1 }).catch(() => null);
-
-  // fallback if RPC not defined:
-  let { data: row } = await supabase.from('likes').select('count').eq('id', 1).single();
-  if (!row) return;
-
-  const newCount = row.count + 1;
-  await supabase.from('likes').update({ count: newCount }).eq('id', 1);
+  const { data } = await supabase
+    .from('likes')
+    .select('count')
+    .eq('id', 1)
+    .single();
+  if (!data) return;
+  const newCount = data.count + 1;
+  await supabase
+    .from('likes')
+    .update({ count: newCount })
+    .eq('id', 1);
   likeCount.textContent = newCount;
 }
 
 likeBtn.addEventListener('click', addLike);
 initLike();
-</script>
-
-<script>
-
-/* clock dots and labels */
-const clock=document.getElementById("clock");
-const dots=[];
-const labels=[];
-
-const SIZE=400;
-const RING=SIZE*0.42;
-const OUT_RING=RING+34;
-const TICK_R=RING+1;
-const cx=SIZE/2;
-const cy=SIZE/2;
-
-let bitMode=0;
-
-const segments=[
-{start:0,len:6,cls:"sec",label:"secLabel"},
-{start:6,len:6,cls:"min",label:"minLabel"},
-{start:12,len:4,cls:"hour",label:"hourLabel"}
-];
-
-/* create dots and outside labels */
-for(let i=0;i<16;i++){
-  const angle=-90+(360*i/16);
-  const rad=angle*Math.PI/180;
-  const x=cx+RING*Math.cos(rad);
-  const y=cy+RING*Math.sin(rad);
-  const lx=cx+OUT_RING*Math.cos(rad);
-  const ly=cy+OUT_RING*Math.sin(rad);
-
-  const seg=segments.find(s=>i>=s.start&&i<s.start+s.len);
-  const bitIndex=i-seg.start;
-  const value=1<<bitIndex;
-
-  const d=document.createElement("div");
-  d.className="dot";
-  d.textContent=value;
-  d.style.left=x+"px";
-  d.style.top=y+"px";
-  clock.appendChild(d);
-  dots.push(d);
-
-  const l=document.createElement("div");
-  l.className="bitLabel "+seg.label;
-  l.textContent=value;
-  l.style.left=lx+"px";
-  l.style.top=ly+"px";
-  clock.appendChild(l);
-  labels.push(l);
-}
-
-/* ticks */
-const boundaries=[5,11,15];
-function addTick(angle){
-  const tick=document.createElement("div");
-  tick.className="tick";
-  const rad=angle*Math.PI/180;
-  tick.style.left=(cx+TICK_R*Math.cos(rad))+"px";
-  tick.style.top=(cy+TICK_R*Math.sin(rad))+"px";
-  tick.style.transform=`translate(-50%,-50%) rotate(${angle}deg)`;
-  clock.appendChild(tick);
-}
-for(let b of boundaries)addTick(-90+(360*(b+0.5)/16));
-
-/* write bit values */
-function writeSegment(value,seg){
-  for(let k=0;k<seg.len;k++){
-    const idx=seg.start+k;
-    const on=(value&(1<<k))!==0;
-    dots[idx].className="dot "+seg.cls+(on?" on":"");
-    if(bitMode===0){
-      dots[idx].style.color=on?"#fff":"transparent";
-      labels[idx].style.opacity=0;
-    }
-    if(bitMode===1){
-      dots[idx].style.color="transparent";
-      labels[idx].style.opacity=0;
-    }
-    if(bitMode===2){
-      dots[idx].style.color="transparent";
-      labels[idx].style.opacity=1;
-    }
-  }
-}
-
-/* update clock */
-function updateClock(){
-  const now=new Date();
-  let h=now.getHours()%12; if(h===0)h=12;
-  let m=now.getMinutes();
-  let s=now.getSeconds();
-  writeSegment(s,segments[0]);
-  writeSegment(m,segments[1]);
-  writeSegment(h,segments[2]);
-  document.getElementById("vHour").textContent=h.toString().padStart(2,"0");
-  document.getElementById("vMin").textContent=m.toString().padStart(2,"0");
-  document.getElementById("vSec").textContent=s.toString().padStart(2,"0");
-}
-setInterval(updateClock,1000);
-updateClock();
-
-/* Center Time toggle display */
-const center=document.getElementById("innerValues");
-const centerSlider=document.getElementById("centerSlider");
-
-document.getElementById("toggleCenter").onchange=e=>{
-  center.style.display=e.target.checked?"block":"none";
-};
-
-/* segmented slider drag */
-const segSlider=document.getElementById("bitMode");
-const highlight=document.getElementById("segHighlight");
-let dragging=false;
-
-function followMouse(x){
-  const rect=segSlider.getBoundingClientRect();
-  let pos=(x-rect.left)/rect.width;
-  if(pos<0)pos=0;
-  if(pos>1)pos=1;
-  highlight.style.left=(pos*100-16.666)+"%";
-}
-
-function snapMode(x){
-  const rect=segSlider.getBoundingClientRect();
-  let pos=(x-rect.left)/rect.width;
-  if(pos<0)pos=0;
-  if(pos>1)pos=1;
-  bitMode=Math.round(pos*2);
-  highlight.style.left=(bitMode*33.333)+"%";
-  updateClock();
-}
-
-segSlider.addEventListener("mousedown",e=>{
-  dragging=true;
-  highlight.classList.add("dragging");
-  centerSlider.classList.add("dragging");
-  followMouse(e.clientX);
-});
-
-document.addEventListener("mousemove",e=>{
-  if(!dragging)return;
-  followMouse(e.clientX);
-});
-
-document.addEventListener("mouseup",e=>{
-  if(!dragging)return;
-  dragging=false;
-  highlight.classList.remove("dragging");
-  centerSlider.classList.remove("dragging");
-  snapMode(e.clientX);
-});
-
-/* open controls */
-const toggleBtn=document.getElementById("controlsToggle");
-const controls=document.getElementById("controlsBox");
-const toggleArrow=document.getElementById("toggleArrow");
-
-let open=false;
-toggleBtn.onclick=()=>{
-  open=!open;
-  controls.classList.toggle("hidden");
-  toggleArrow.textContent=open?"⌃":"⌄";
-};
-
 </script>
 </body>
 </html>
