@@ -262,14 +262,13 @@ transition:none;
 
 </div>
 
-<div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);text-align:center;color:#fff;">
-  <button id="likeBtn" style="padding:10px 20px;font-size:16px;cursor:pointer;">👍 Like</button>
-  <div>Likes: <span id="likeCount">0</span></div>
+<div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);text-align:center;color:#fff;font-family:system-ui;">
+  <button id="likeBtn" style="padding:10px 20px;font-size:16px;cursor:pointer;background:#333;border:none;border-radius:6px;color:#fff;">👍 Like</button>
+  <div style="margin-top:4px;">Likes: <span id="likeCount">0</span></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
-  // Initialize Supabase
   const supabaseUrl = 'https://zungpwkzouoyzplnrrxv.supabase.co'
   const supabaseKey = 'sb_publishable_BWbybVJDJoW3bEUqQfp2Kg_WFUoBQQh'
   const supabase = supabase.createClient(supabaseUrl, supabaseKey)
@@ -277,28 +276,44 @@ transition:none;
   const likeBtn = document.getElementById('likeBtn')
   const likeCount = document.getElementById('likeCount')
 
-  // Load likes from database
-  async function getLikes() {
-    let { data, error } = await supabase
+  // Initialize like count
+  async function initLike() {
+    let { data } = await supabase
+      .from('likes')
+      .select('*')
+      .eq('id', 1)
+      .single()
+    
+    if (!data) {
+      await supabase.from('likes').insert({ id: 1, count: 0 })
+      likeCount.textContent = 0
+    } else {
+      likeCount.textContent = data.count
+    }
+  }
+
+  // Increment like
+  async function addLike() {
+    const { data } = await supabase
       .from('likes')
       .select('count')
       .eq('id', 1)
       .single()
-    if(data) likeCount.textContent = data.count
-  }
 
-  // Increment likes
-  async function addLike() {
-    const { data, error } = await supabase
+    if (!data) return
+
+    const newCount = data.count + 1
+
+    await supabase
       .from('likes')
-      .upsert({ id: 1, count: supabase.literal('count + 1') })
-      .select()
-      .single()
-    if(data) likeCount.textContent = data.count
+      .update({ count: newCount })
+      .eq('id', 1)
+
+    likeCount.textContent = newCount
   }
 
   likeBtn.addEventListener('click', addLike)
-  getLikes()
+  initLike()
 </script>
 
 <script>
