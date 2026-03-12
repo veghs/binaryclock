@@ -29,18 +29,31 @@ height:22px;
 border-radius:50%;
 background:rgb(10,10,10);
 transform:translate(-50%,-50%);
-transition:background .15s,color .15s;
 display:flex;
 align-items:center;
 justify-content:center;
 font-size:12px;
 font-weight:600;
 color:transparent;
+transition:background .15s,color .15s;
+}
+
+.bitLabel{
+position:absolute;
+transform:translate(-50%,-50%);
+font-size:12px;
+font-weight:600;
+pointer-events:none;
+opacity:0;
 }
 
 .sec.on{background:rgb(50,255,50);}
 .min.on{background:rgb(50,170,255);}
 .hour.on{background:rgb(255,80,50);}
+
+.secLabel{color:rgb(50,255,50);}
+.minLabel{color:rgb(50,170,255);}
+.hourLabel{color:rgb(255,80,50);}
 
 .tick{
 position:absolute;
@@ -61,6 +74,12 @@ transform:translate(-50%,-50%);
 text-align:center;
 line-height:1.2;
 pointer-events:none;
+color:#ccc;
+transition:color .15s; /* added transition */
+}
+
+#innerValues.whiteDot{
+color:#fff; /* turns dot white when toggled */
 }
 
 #innerValues div{
@@ -81,27 +100,10 @@ font-size:22px;
 cursor:pointer;
 user-select:none;
 opacity:.85;
-color:#555555;
+color:#555;
 display:flex;
 align-items:center;
 gap:4px;
-}
-
-#controlsToggle:hover{
-opacity:1;
-}
-
-#pausedIcon{
-color:#888888;
-font-size:20px;
-opacity:0;
-transition:opacity 0.3s ease;
-position:absolute;
-left:calc(50% + 16px);
-margin-top: 5px;
-top:50%;
-transform:translateY(-50%);
-pointer-events:none;
 }
 
 .controls{
@@ -111,20 +113,20 @@ top:78%;
 transform:translateX(-50%);
 display:flex;
 flex-direction:column;
-gap:10px;
+gap:12px;
 align-items:center;
 }
 
-.controls.hidden{
-display:none;
-}
+.controls.hidden{display:none;}
 
 .switchRow{
 display:flex;
 align-items:center;
-gap:10px;
+gap:12px;
 font-size:14px;
 }
+
+/* iOS-style switch */
 
 .switch{
 position:relative;
@@ -147,8 +149,8 @@ left:0;
 right:0;
 bottom:0;
 background:#444;
-transition:.25s;
 border-radius:20px;
+transition:.25s;
 }
 
 .slider:before{
@@ -158,36 +160,81 @@ height:18px;
 width:18px;
 left:3px;
 bottom:3px;
-background:white;
-transition:.25s;
+background:#888; /* gray when OFF */
 border-radius:50%;
+transition:.25s;
 }
 
+/* background green when ON */
 input:checked + .slider{
-background:#3cff6a;
+background:#34c759;
 }
 
+/* knob white when ON */
 input:checked + .slider:before{
+background:#fff !important;
 transform:translateX(22px);
 }
+
+/* dragging style */
+.slider.dragging:before{
+background:#fff !important;
+}
+
+/* segmented slider */
+
+.segmented{
+position:relative;
+display:flex;
+width:140px;
+height:26px;
+background:#222;
+border-radius:14px;
+overflow:hidden;
+cursor:pointer;
+}
+
+.segmented div{
+flex:1;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:11px;
+color:#888;
+z-index:2;
+user-select:none;
+}
+
+.segHighlight{
+position:absolute;
+width:33.333%;
+height:100%;
+background:#3cff6a;
+border-radius:14px;
+left:0%;
+z-index:1;
+transition:left .15s;
+}
+
+.segHighlight.dragging{
+transition:none;
+}
+
 </style>
 </head>
 
 <body>
 
 <div id="clock">
-
 <div id="innerValues">
 <div id="vHour">--</div>
 <div id="vMin">--</div>
 <div id="vSec">--</div>
 </div>
-
 </div>
 
 <div id="controlsToggle">
 <span id="toggleArrow">⌄</span>
-<span id="pausedIcon">⏸</span>
 </div>
 
 <div class="controls hidden" id="controlsBox">
@@ -196,149 +243,169 @@ transform:translateX(22px);
 <span>Center Time</span>
 <label class="switch">
 <input type="checkbox" id="toggleCenter" checked>
-<span class="slider"></span>
+<span class="slider" id="centerSlider"></span>
 </label>
 </div>
 
 <div class="switchRow">
 <span>Bit Values</span>
-<label class="switch">
-<input type="checkbox" id="toggleBits" checked>
-<span class="slider"></span>
-</label>
+<div class="segmented" id="bitMode">
+<div class="segHighlight" id="segHighlight"></div>
+<div>inside</div>
+<div>hidden</div>
+<div>outside</div>
+</div>
 </div>
 
 </div>
 
 <script>
 
+/* clock dots and labels */
 const clock=document.getElementById("clock");
 const dots=[];
 
 const SIZE=400;
 const RING=SIZE*0.42;
+const OUT_RING=RING+34;
 const TICK_R=RING+1;
 const cx=SIZE/2;
 const cy=SIZE/2;
 
+let bitMode=0;
+
 const segments=[
-{start:0,len:6,cls:"sec"},
-{start:6,len:6,cls:"min"},
-{start:12,len:4,cls:"hour"}
+{start:0,len:6,cls:"sec",label:"secLabel"},
+{start:6,len:6,cls:"min",label:"minLabel"},
+{start:12,len:4,cls:"hour",label:"hourLabel"}
 ];
 
+/* create dots and outside labels */
 for(let i=0;i<16;i++){
-    const angleDeg=-90+(360*i/16);
-    const rad=angleDeg*Math.PI/180;
-    const x=cx+RING*Math.cos(rad);
-    const y=cy+RING*Math.sin(rad);
+  const angle=-90+(360*i/16);
+  const rad=angle*Math.PI/180;
+  const x=cx+RING*Math.cos(rad);
+  const y=cy+RING*Math.sin(rad);
 
-    const d=document.createElement("div");
-    d.className="dot";
+  const seg=segments.find(s=>i>=s.start&&i<s.start+s.len);
+  const bitIndex=i-seg.start;
+  const value=1<<bitIndex;
 
-    const seg=segments.find(s=>i>=s.start&&i<s.start+s.len);
-    d.dataset.seg=seg.cls;
-
-    const bitIndex=i-seg.start;
-    const value=1<<bitIndex;
-    d.textContent=value;
-
-    d.style.left=x+"px";
-    d.style.top=y+"px";
-
-    clock.appendChild(d);
-    dots.push(d);
+  const d=document.createElement("div");
+  d.className="dot";
+  d.textContent=value;
+  d.style.left=x+"px";
+  d.style.top=y+"px";
+  clock.appendChild(d);
+  dots.push(d);
 }
 
+/* ticks */
 const boundaries=[5,11,15];
-
-function addTick(angleDeg){
-    const tick=document.createElement("div");
-    tick.className="tick";
-    const rad=angleDeg*Math.PI/180;
-    tick.style.left=(cx+TICK_R*Math.cos(rad))+"px";
-    tick.style.top=(cy+TICK_R*Math.sin(rad))+"px";
-    tick.style.transform=`translate(-50%,-50%) rotate(${angleDeg}deg)`;
-    clock.appendChild(tick);
+function addTick(angle){
+  const tick=document.createElement("div");
+  tick.className="tick";
+  const rad=angle*Math.PI/180;
+  tick.style.left=(cx+TICK_R*Math.cos(rad))+"px";
+  tick.style.top=(cy+TICK_R*Math.sin(rad))+"px";
+  tick.style.transform=`translate(-50%,-50%) rotate(${angle}deg)`;
+  clock.appendChild(tick);
 }
+for(let b of boundaries)addTick(-90+(360*(b+0.5)/16));
 
-for(let b of boundaries){
-    addTick(-90+(360*(b+0.5)/16));
-}
-
+/* write bit values */
 function writeSegment(value,seg){
-    const showBits = document.getElementById("toggleBits").checked;
-    for(let k=0;k<seg.len;k++){
-        const idx=seg.start+k;
-        const on=(value&(1<<k))!==0;
-        dots[idx].className="dot "+seg.cls+(on?" on":"");
-        dots[idx].style.color = (on && showBits) ? "#fff" : "transparent";
-    }
+  for(let k=0;k<seg.len;k++){
+    const idx=seg.start+k;
+    const on=(value&(1<<k))!==0;
+    dots[idx].className="dot "+seg.cls+(on?" on":"");
+  }
 }
 
-let paused = false;
-let pausedTime = null;
-
+/* update clock */
 function updateClock(){
-    const now = paused ? pausedTime : new Date();
-    let h = now.getHours() % 12;
-    if(h===0) h = 12;
-    let m = now.getMinutes();
-    let s = now.getSeconds();
-
-    writeSegment(s,segments[0]);
-    writeSegment(m,segments[1]);
-    writeSegment(h,segments[2]);
-
-    document.getElementById("vHour").textContent=h.toString().padStart(2,"0");
-    document.getElementById("vMin").textContent=m.toString().padStart(2,"0");
-    document.getElementById("vSec").textContent=s.toString().padStart(2,"0");
+  const now=new Date();
+  let h=now.getHours()%12; if(h===0)h=12;
+  let m=now.getMinutes();
+  let s=now.getSeconds();
+  writeSegment(s,segments[0]);
+  writeSegment(m,segments[1]);
+  writeSegment(h,segments[2]);
+  document.getElementById("vHour").textContent=h.toString().padStart(2,"0");
+  document.getElementById("vMin").textContent=m.toString().padStart(2,"0");
+  document.getElementById("vSec").textContent=s.toString().padStart(2,"0");
 }
-
-setInterval(() => {
-    if(!paused) updateClock();
-},1000);
-
+setInterval(updateClock,1000);
 updateClock();
 
+/* Center Time toggle display */
 const center=document.getElementById("innerValues");
-document.getElementById("toggleCenter").onchange=(e)=>{
-    center.style.display=e.target.checked?"block":"none";
-};
-document.getElementById("toggleBits").onchange=(e)=>{
-    updateClock();
-};
+const centerSlider=document.getElementById("centerSlider");
 
-const toggleBtn=document.getElementById("controlsToggle");
-const pausedIcon=document.getElementById("pausedIcon");
-const toggleArrow=document.getElementById("toggleArrow");
-const controls=document.getElementById("controlsBox");
-let open=false;
-
-toggleBtn.onclick = () => {
-    open = !open;
-    controls.classList.toggle("hidden");
-    toggleArrow.textContent = open ? "⌃" : "⌄";
-    toggleBtn.style.top = open ? "73.8%" : "73%";
+document.getElementById("toggleCenter").onchange=e=>{
+  center.style.display=e.target.checked?"block":"none";
+  if(e.target.checked){
+    center.classList.add("whiteDot"); // dot becomes white
+  } else {
+    center.classList.remove("whiteDot");
+  }
 };
 
-document.addEventListener("keydown", (e)=>{
-    if(e.code==="Space"){
-        e.preventDefault();
-        paused = !paused;
-        if(paused){
-            pausedTime = new Date();
-            pausedIcon.style.opacity = "1";
-            updateClock();
-        } else {
-            pausedTime = null;
-            pausedIcon.style.opacity = "0";
-            updateClock();
-        }
-    }
+/* segmented slider drag */
+const segSlider=document.getElementById("bitMode");
+const highlight=document.getElementById("segHighlight");
+let dragging=false;
+
+function followMouse(x){
+  const rect=segSlider.getBoundingClientRect();
+  let pos=(x-rect.left)/rect.width;
+  if(pos<0)pos=0;
+  if(pos>1)pos=1;
+  highlight.style.left=(pos*100-16.666)+"%";
+}
+
+function snapMode(x){
+  const rect=segSlider.getBoundingClientRect();
+  let pos=(x-rect.left)/rect.width;
+  if(pos<0)pos=0;
+  if(pos>1)pos=1;
+  bitMode=Math.round(pos*2);
+  highlight.style.left=(bitMode*33.333)+"%";
+  updateClock();
+}
+
+segSlider.addEventListener("mousedown",e=>{
+  dragging=true;
+  highlight.classList.add("dragging");
+  centerSlider.classList.add("dragging");
+  followMouse(e.clientX);
 });
 
-</script>
+document.addEventListener("mousemove",e=>{
+  if(!dragging)return;
+  followMouse(e.clientX);
+});
 
+document.addEventListener("mouseup",e=>{
+  if(!dragging)return;
+  dragging=false;
+  highlight.classList.remove("dragging");
+  centerSlider.classList.remove("dragging");
+  snapMode(e.clientX);
+});
+
+/* open controls */
+const toggleBtn=document.getElementById("controlsToggle");
+const controls=document.getElementById("controlsBox");
+const toggleArrow=document.getElementById("toggleArrow");
+
+let open=false;
+toggleBtn.onclick=()=>{
+  open=!open;
+  controls.classList.toggle("hidden");
+  toggleArrow.textContent=open?"⌃":"⌄";
+};
+
+</script>
 </body>
 </html>
