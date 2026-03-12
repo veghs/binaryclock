@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>BinaryClock - vegh</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.33.1/dist/supabase.min.js"></script>
 
 <style>
 html, body {
@@ -269,53 +269,48 @@ transition:none;
 </div>
 
 <script>
-  const supabaseUrl = 'https://zungpwkzouoyzplnrrxv.supabase.co';
-  const supabaseKey = 'sb_publishable_BWbybVJDJoW3bEUqQfp2Kg_WFUoBQQh';
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = 'https://zungpwkzouoyzplnrrxv.supabase.co';
+const supabaseKey = 'sb_publishable_BWbybVJDJoW3bEUqQfp2Kg_WFUoBQQh';
+const supabase = Supabase.createClient(supabaseUrl, supabaseKey); // notice capital S
 
-  const likeBtn = document.getElementById('likeBtn');
-  const likeCount = document.getElementById('likeCount');
+const likeBtn = document.getElementById('likeBtn');
+const likeCount = document.getElementById('likeCount');
 
-  async function initLike() {
+async function initLike() {
   let { data, error } = await supabase
     .from('likes')
     .select('count')
     .eq('id', 1)
-    .single();
+    .maybeSingle(); // <-- safe if row missing
 
-  if (error) {
-    // Row missing, insert it
-    await supabase.from('likes').insert({ id: 1, count: 2 });
-    likeCount.textContent = 2;
+  if (!data) {
+    // row missing, insert it
+    const { data: inserted } = await supabase
+      .from('likes')
+      .insert({ id: 1, count: 2 })
+      .select()
+      .single();
+    likeCount.textContent = inserted.count;
   } else {
     likeCount.textContent = data.count;
   }
 }
 
-  async function addLike() {
-    // Get current count
-    const { data } = await supabase
-      .from('likes')
-      .select('count')
-      .eq('id', 1)
-      .single();
+async function addLike() {
+  // increment atomically
+  const { data, error } = await supabase.rpc('increment', { current_id: 1 }).catch(() => null);
 
-    if (!data) return;
+  // fallback if RPC not defined:
+  let { data: row } = await supabase.from('likes').select('count').eq('id', 1).single();
+  if (!row) return;
 
-    const newCount = data.count + 1;
+  const newCount = row.count + 1;
+  await supabase.from('likes').update({ count: newCount }).eq('id', 1);
+  likeCount.textContent = newCount;
+}
 
-    // Update database
-    await supabase
-      .from('likes')
-      .update({ count: newCount })
-      .eq('id', 1);
-
-    // Update DOM
-    likeCount.textContent = newCount;
-  }
-
-  likeBtn.addEventListener('click', addLike);
-  initLike();
+likeBtn.addEventListener('click', addLike);
+initLike();
 </script>
 
 <script>
