@@ -276,20 +276,20 @@ transition:none;
   const likeCount = document.getElementById('likeCount');
 
   async function initLike() {
-    let { data, error } = await supabase
-      .from('likes')
-      .select('count')
-      .eq('id', 1)
-      .single();
+  let { data, error } = await supabase
+    .from('likes')
+    .select('count')
+    .eq('id', 1)
+    .single();
 
-    if (error) {
-      // If row doesn't exist, insert it
-      await supabase.from('likes').insert({ id: 1, count: 0 });
-      likeCount.textContent = 0;
-    } else {
-      likeCount.textContent = data.count;
-    }
+  if (error) {
+    // Row missing, insert it
+    await supabase.from('likes').insert({ id: 1, count: 2 });
+    likeCount.textContent = 2;
+  } else {
+    likeCount.textContent = data.count;
   }
+}
 
   async function addLike() {
     // Get current count
