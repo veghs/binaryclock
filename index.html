@@ -267,7 +267,6 @@ transition:none;
   <div style="margin-top:4px;">Likes: <span id="likeCount">0</span></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
   const supabaseUrl = 'https://zungpwkzouoyzplnrrxv.supabase.co'
   const supabaseKey = 'sb_publishable_BWbybVJDJoW3bEUqQfp2Kg_WFUoBQQh'
@@ -276,15 +275,16 @@ transition:none;
   const likeBtn = document.getElementById('likeBtn')
   const likeCount = document.getElementById('likeCount')
 
-  // Initialize like count
+  // Load or initialize the like count
   async function initLike() {
-    let { data } = await supabase
+    const { data, error } = await supabase
       .from('likes')
-      .select('*')
+      .select('count')
       .eq('id', 1)
       .single()
     
-    if (!data) {
+    if (error && error.code === 'PGRST116') {
+      // Row does not exist, insert it
       await supabase.from('likes').insert({ id: 1, count: 0 })
       likeCount.textContent = 0
     } else {
@@ -292,14 +292,28 @@ transition:none;
     }
   }
 
-  // Increment like
+  // Increment like reliably using upsert
   async function addLike() {
+    const { data, error } = await supabase
+      .from('likes')
+      .upsert(
+        { id: 1, count: supabase.rpc('increment', { current: parseInt(likeCount.textContent) }) },
+        { onConflict: ['id'] }
+      )
+      .select()
+      .single()
+    
+    if (data) likeCount.textContent = data.count
+  }
+
+  // Fallback simple increment without RPC if you don’t define a function
+  async function addLikeSimple() {
     const { data } = await supabase
       .from('likes')
       .select('count')
       .eq('id', 1)
       .single()
-
+    
     if (!data) return
 
     const newCount = data.count + 1
@@ -312,8 +326,9 @@ transition:none;
     likeCount.textContent = newCount
   }
 
-  likeBtn.addEventListener('click', addLike)
+  likeBtn.addEventListener('click', addLikeSimple)
   initLike()
+</script>
 </script>
 
 <script>
