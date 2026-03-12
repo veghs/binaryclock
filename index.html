@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Like Test</title>
+<title>Supabase Likes Test</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 </head>
 <body>
@@ -18,40 +18,67 @@ const likeBtn = document.getElementById('likeBtn');
 const likeCount = document.getElementById('likeCount');
 
 async function initLike() {
-  const { data } = await supabase
-    .from('likes')
-    .select('count')
-    .eq('id', 1)
-    .maybeSingle();
-
-  if (!data) {
-    const { data: inserted } = await supabase
+  try {
+    const { data, error } = await supabase
       .from('likes')
-      .insert({ id: 1, count: 2 })
-      .select()
-      .single();
-    likeCount.textContent = inserted.count;
-  } else {
-    likeCount.textContent = data.count;
+      .select('count')
+      .eq('id', 1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching likes:', error);
+      return;
+    }
+
+    if (!data) {
+      // insert initial row
+      const { data: inserted, error: insertError } = await supabase
+        .from('likes')
+        .insert({ id: 1, count: 2 })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error inserting row:', insertError);
+        return;
+      }
+
+      likeCount.textContent = inserted.count;
+    } else {
+      likeCount.textContent = data.count;
+    }
+  } catch (e) {
+    console.error('Unexpected error:', e);
   }
 }
 
 async function addLike() {
-  const { data } = await supabase
-    .from('likes')
-    .select('count')
-    .eq('id', 1)
-    .single();
-  if (!data) return;
-  const newCount = data.count + 1;
-  await supabase
-    .from('likes')
-    .update({ count: newCount })
-    .eq('id', 1);
-  likeCount.textContent = newCount;
+  try {
+    const { data, error } = await supabase
+      .from('likes')
+      .select('count')
+      .eq('id', 1)
+      .single();
+
+    if (error) {
+      console.error('Error reading likes:', error);
+      return;
+    }
+
+    const newCount = data.count + 1;
+    await supabase
+      .from('likes')
+      .update({ count: newCount })
+      .eq('id', 1);
+
+    likeCount.textContent = newCount;
+  } catch (e) {
+    console.error('Unexpected error:', e);
+  }
 }
 
 likeBtn.addEventListener('click', addLike);
+
 initLike();
 </script>
 </body>
